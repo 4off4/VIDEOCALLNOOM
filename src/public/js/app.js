@@ -1,87 +1,87 @@
 const socket = io();
+const myFace = document.getElementById("myFace");
+const muteBtn = document.getElementById("mute");
+const cameraBtn = document.getElementById("camera");
+const camerasSelect = document.getElementById("cameras");
 
-const welcome = document.getElementById("welcome");
-const form = welcome.querySelector("form");
-const room = document.getElementById("room");
+let myStream; 
+let muted = false;
+let cameraOff = false;
 
-// 방 입장 전에 메시지 보내기 기능 숨기기 
-room.hidden = true;
-
-let roomName;
-
-function addMessage(message) {
-    const ul = room.querySelector("ul");
-    const li = document.createElement("li");
-    li.innerText = message;
-    ul.appendChild(li);
-};
-
-function handleMessageSubmit(event) {
-    event.preventDefault();
-    const input = room.querySelector("#msg input");
-    const value = input.value.toString('utf8');
-    socket.emit("new_message", value, roomName, () => {
-        addMessage(`You: ${value}`);
-    });
-    input.value = "";
-};
-
-function handleNicknameSubmit(event){
-    event.preventDefault();
-    const input = room.querySelector("#name input");  
-    socket.emit("nickname", input.value.toString('utf8'));
-    input.value = "";
+async function getCameras() {
+    try{
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter((device) => device.kind === "videoinput");
+        const currentCamera = myStream.getVideoTracks()[0];
+        cameras.forEach(camera => {
+            const option = document.createElement("option");
+            option.value = camera.deviceId;
+            if(currentCamera.label == camera.label){
+                option.selected = true;
+                option.innerText = "√ " + camera.label;
+            }else{
+                option.innerText = camera.label;
+            }
+            camerasSelect.appendChild(option);
+        });
+    }catch(e){
+        console.log(e);
+    }
 }
 
-function showRoom() {
-    welcome.hidden = true;
-    room.hidden = false;
-    const h3 = room.querySelector("h3");
-    h3.innerText = `방 이름: ${roomName}`;
+async function getMedia(deviceId) {
+    // deviceId가 없을 때 
+    const initialConstrains = {
+        audio: true,
+        video: {facingMode: "user"}
+    };
+     // deviceId가 있을 때
+    const cameraConstrains = {
+        audio: true,
+        video: {deviceId:{exact: deviceId}}
+    };
+    try{
+        myStream = await navigator.mediaDevices.getUserMedia(
+            deviceId? cameraConstrains: initialConstrains
+        );
+        myFace.srcObject = myStream;
+        if(!deviceId){
+            await getCameras();
+        }
+    } catch(e){
+        console.log(e);
+    }
+}
 
-    // form 이용하며 백엔드로 메시지 보내기 
-    const msgForm = room.querySelector("#msg");
-    const nameForm = room.querySelector("#name");
-    msgForm.addEventListener("submit", handleMessageSubmit);
-    nameForm.addEventListener("submit", handleNicknameSubmit);
-};
+getMedia();
 
-function handleRoomSubmit(event) {
-    event.preventDefault();
-    const input = form.querySelector("input");
+function handleMuteClick() {
+    myStream.getAudioTracks().forEach((track) => (track.enabled = !track.enabled));
 
-    // 백엔드로 메시지 전송 후, showRoom 함수 호출 
-    socket.emit("enter_room", input.value.toString('utf8'), showRoom);
-    roomName = input.value;
-    input.value = "";
-};
+    if(!muted){
+        muteBtn.innerText = "Unmute";
+        muted = true;
+    }else{
+        muteBtn.innerText = "Mute";
+        muted = false;
+    }
+}
+function handleCameraClick() {
+    myStream.getVideoTracks().forEach((track) => (track.enabled = !track.enabled));
 
-form.addEventListener("submit", handleRoomSubmit);
+    if(cameraOff){
+        cameraBtn.innerText = "Turn Camera Off";
+        cameraOff = false;
+    }else{
+        cameraBtn.innerText = "Turn Camera On";
+        cameraOff = true;
+    }
+}
 
-// 유저 입장 메시지 
-socket.on("welcome", (user, newCount) => {
-    const h3 = room.querySelector("h3");
-    h3.innerText = `방 이름: ${roomName} (${newCount})`;
-    addMessage(`${user}가 입장했습니다.`);
-});
+async function handleCameraChange() {
+    await getMedia(camerasSelect.value);
+}
 
-// 유저 퇴장 메시지
-socket.on("bye", (left, newCount) => {
-    const h3 = room.querySelector("h3");
-    h3.innerText = `방 이름: ${roomName} (${newCount})`;
-    addMessage(`${left}가 퇴장했습니다 ㅠㅠ`);
-});
-
-// 유저의 새로운 메시지
-socket.on("new_message", addMessage);
-
-// 방 생성 
-socket.on("room_change", (rooms) => {
-    const roomList = welcome.querySelector("ul");
-    roomList.innerHTML= "";
-    rooms.forEach(room => {
-        const li = document.createElement("li");
-        li.innerText = room;
-        roomList.append(li);
-    })
-});
+muteBtn.addEventListener("click", handleMuteClick);
+cameraBtn.addEventListener("click", handleCameraClick);
+camerasSelect.addEventListener("input", handleCameraChange);
