@@ -84,6 +84,13 @@ function handleCameraClick() {
 
 async function handleCameraChange() {
     await getMedia(camerasSelect.value);
+    if(myPeerConnection){
+        const videoTrack = myStream.getVideoTracks()[0];
+        const videoSender = myPeerConnection.getSenders().find(sender => sender.track.kind == "video");
+        
+        // 다른 브라우저에 나의 비디오를 보내기
+        videoSender.replaceTrack(videoTrack);
+    }
 }
 
 muteBtn.addEventListener("click", handleMuteClick);
@@ -115,7 +122,6 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
 
 /* Socekt 코드 */ 
-
 // 해당 코드는 peer A에서 실행 
 socket.on("welcome", async () => {
     const offer = await myPeerConnection.createOffer();
@@ -133,13 +139,53 @@ socket.on("offer", async(offer) => {
 });
 
 socket.on("answer", (answer) => {
+    console.log("received the answer");
     myPeerConnection.setRemoteDescription(answer);
 });
 
+socket.on("ice", (ice) => {
+    console.log("received candidate");
+    myPeerConnection.addIceCandidate(ice);
+  });
+
 // RTC 코드 
 function makeConnection(){                     
-    myPeerConnection = new RTCPeerConnection();
+    myPeerConnection = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302",
+                ],
+            },
+        ],
+    });
+    myPeerConnection.addEventListener("icecandidate", handleIce);
+    myPeerConnection.addEventListener("addstream", handleAddStream);
+    //myPeerConnection.addEventListener("track", handleTrack); // 모바일-핸드폰 연결 사용 - #3.9수업 댓글 확인
+
     // peer-to-peer 연결 
     myStream.getTracks().forEach((track) => myPeerConnection.addTrack(track, myStream));
     // addTrack: track들을 개별적으로 추가해주는 함수 
+}
+
+// 모바일-핸드폰 연결 사용 - #3.9수업 댓글 확인
+/*
+function handleTrack(data) {
+    console.log("handle track");
+    const peerFace = document.querySelector("#peerFace");
+    peerFace.srcObject = data.streams[0];
+}*/
+
+function handleIce(data) {
+    console.log("sent candidate");
+    socket.emit("ice", data.candidate, roomName);
+}
+  
+function handleAddStream(data) {
+    const peerFace = document.getElementById("peerFace");
+    peerFace.srcObject = data.stream;
 }
