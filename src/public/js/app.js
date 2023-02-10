@@ -13,6 +13,7 @@ let muted = false;
 let cameraOff = false;
 let roomName;
 let myPeerConnection; 
+let myDataChannel;
 
 async function getCameras() {
     try{
@@ -74,10 +75,10 @@ function handleCameraClick() {
     myStream.getVideoTracks().forEach((track) => (track.enabled = !track.enabled));
 
     if(cameraOff){
-        cameraBtn.innerText = "Turn Camera Off";
+        cameraBtn.innerText = "Camera Off";
         cameraOff = false;
     }else{
-        cameraBtn.innerText = "Turn Camera On";
+        cameraBtn.innerText = "Camera On";
         cameraOff = true;
     }
 }
@@ -112,11 +113,26 @@ async function initCall() {
 async function handleWelcomeSubmit(event){
     event.preventDefault();
     const input = welcomeForm.querySelector("input");
-    await initCall();
+    const inputV = input.value.toString('utf8');
 
-    socket.emit("join_room", input.value.toString('utf8'));
-    roomName = input.value.toString('utf8');
-    input.value = "";
+    console.log(inputV);
+
+    // 특수문자 
+    const regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/g;
+    
+    if(regExp.test(inputV)) {
+        alert("Special characters are not allowed!");
+        input.value = "";
+    }else if(inputV.length <= 1 || inputV.length > 10){
+        alert("The room name is at least 2 to 10 characters long!");
+    }
+    else{
+        await initCall();
+        socket.emit("join_room", inputV);
+        roomName = inputV;
+        input.value = "";
+    }
+
 }
 welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
@@ -124,6 +140,11 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 /* Socekt 코드 */ 
 // 해당 코드는 peer A에서 실행 
 socket.on("welcome", async () => {
+    // DataChannel
+    myDataChannel = myPeerConnection.createDataChannel("chat");
+    myDataChannel.addEventListener("message", (event) => console.log(event.data));
+    console.log("made data channel!");
+
     const offer = await myPeerConnection.createOffer();
     myPeerConnection.setLocalDescription(offer);
     console.log("Sent the offer");
@@ -132,6 +153,11 @@ socket.on("welcome", async () => {
 
 // 해당 코드는 peer B에서 실행 
 socket.on("offer", async(offer) => {
+    myPeerConnection.addEventListener("datachannel", (event) => {
+        myDataChannel = event.channel;
+        myDataChannel.addEventListener("message", (event) => console.log(event.data));
+    });
+
     myPeerConnection.setRemoteDescription(offer);
     const answer = await myPeerConnection.createAnswer();
     myPeerConnection.setLocalDescription(answer);
