@@ -53,7 +53,7 @@ input {
 }
 
 /* Button */
-#save, #enter {
+#save, #send, #enter {
     width: 140px;
     height: 45px;
     font-family: 'Roboto', sans-serif;
@@ -70,7 +70,7 @@ input {
     cursor: pointer;
     outline: none;
 }
-#save:hover, #enter:hover {
+#save:hover, #send:hover, #enter:hover {
     background-color: #B8F3B8;
     box-shadow: #95d495;
     color: #fff;
@@ -122,4 +122,15 @@ select:focus {
 }
 select:disabled {
     opacity: 0.5;
+}
+
+/* ul */
+#room > ul > li {
+    background-image: url("../img/messaging.png");
+    background-position: left center;
+    background-repeat: no-repeat;
+    background-size:36px;
+    margin: 0;
+    padding: 20px 0 20px 50px;
+    list-style: none;
 }

@@ -12,10 +12,21 @@ html(lang="en")
         main
             div#welcome
                 span#intro Please enter a room name 
-                form 
+                form
                     input(type="text", placeholder="room name", required)
                     button#enter Enter Room 
             div#call
+                h4
+                div#nick 
+                    form#name
+                        input(type="text", placeholder="nickname", required)
+                        button#save Save
+                div#room
+                    hr
+                    ul
+                    form#msg
+                        input(placeholder="message", type="text", required) 
+                        button#send Send 
                 div#myStream
                     video#myFace(autoplay,playsinline)
                     div#myStreamCameraSelector

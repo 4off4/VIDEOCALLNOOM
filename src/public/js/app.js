@@ -4,9 +4,14 @@ const myFace = document.getElementById("myFace");
 const muteBtn = document.getElementById("mute");
 const cameraBtn = document.getElementById("camera");
 const camerasSelect = document.getElementById("cameras");
+
+/* 닉네임/메시지 */
 const call  = document.getElementById("call");
+const nick  = document.getElementById("nick");
+const room = document.getElementById("room");
 
 call.hidden = true;
+nick.hidden = true;
 
 let myStream; 
 let muted = false;
@@ -106,6 +111,9 @@ const welcomeForm = welcome.querySelector("form");
 async function initCall() {
     welcome.hidden = true;
     call.hidden = false;
+    nick.hidden = false;
+    room.hidden = true;
+
     await getMedia();
     makeConnection();
 }
@@ -115,18 +123,21 @@ async function handleWelcomeSubmit(event){
     const input = welcomeForm.querySelector("input");
     const inputV = input.value.toString('utf8');
 
-    console.log(inputV);
-
     // 특수문자 
     const regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/g;
+
+    // form 이용하며 백엔드로 메시지 보내기 
+    const nameForm = nick.querySelector("#name");
+    const msgForm = room.querySelector("#msg");
+    nameForm.addEventListener("submit", handleNicknameSubmit);
+    msgForm.addEventListener("submit", handleMessageSubmit);
     
     if(regExp.test(inputV)) {
         alert("Special characters are not allowed!");
         input.value = "";
     }else if(inputV.length <= 1 || inputV.length > 10){
         alert("The room name is at least 2 to 10 characters long!");
-    }
-    else{
+    }else{
         await initCall();
         socket.emit("join_room", inputV);
         roomName = inputV;
@@ -136,13 +147,12 @@ async function handleWelcomeSubmit(event){
 }
 welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
-
 /* Socekt 코드 */ 
 // 해당 코드는 peer A에서 실행 
 socket.on("welcome", async () => {
     // DataChannel
     myDataChannel = myPeerConnection.createDataChannel("chat");
-    myDataChannel.addEventListener("message", (event) => console.log(event.data));
+    myDataChannel.addEventListener("message", (event) => {addMessage(event.data)});
     console.log("made data channel!");
 
     const offer = await myPeerConnection.createOffer();
@@ -155,7 +165,7 @@ socket.on("welcome", async () => {
 socket.on("offer", async(offer) => {
     myPeerConnection.addEventListener("datachannel", (event) => {
         myDataChannel = event.channel;
-        myDataChannel.addEventListener("message", (event) => console.log(event.data));
+        myDataChannel.addEventListener("message", (event) => {addMessage(event.data)});
     });
 
     myPeerConnection.setRemoteDescription(offer);
@@ -215,3 +225,49 @@ function handleAddStream(data) {
     const peerFace = document.getElementById("peerFace");
     peerFace.srcObject = data.stream;
 }
+
+// 닉네임 
+function handleNicknameSubmit(event){
+    event.preventDefault();
+    const input = nick.querySelector("#name input");  
+    const value = input.value.toString('utf8');
+    const nickNameCheck = call.querySelector("h4");
+
+    // 특수문자 
+    const regExp = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@\#$%&\\\=\(\'\"]/g;
+
+    if(regExp.test(value)) {
+        alert("Special characters are not allowed!");
+        input.value = "";
+    }else if(value.length <= 1 || value.length > 10){
+        alert("The room name is at least 2 to 10 characters long!");
+    }else {
+        socket.emit("nickname", value);
+        nickNameCheck.innerText = value + `님`;
+        input.value = "";
+        nick.hidden = true;
+        room.hidden = false;
+    }
+}
+
+function handleMessageSubmit(event) {
+    const myNick = call.querySelector("h4");
+
+    event.preventDefault();
+    const input = room.querySelector("#msg input");
+    const value = input.value.toString('utf8');
+
+    //const li = room.querySelector("li");
+    //li.style.backgroundImage = `url(${"../img/chat.png"})`;
+    myDataChannel.send(`${myNick.innerText}: ${value}`);
+    addMessage(`${myNick.innerText}: ${value}`);
+    input.value = "";
+};
+
+function addMessage(message) {
+    const ul = room.querySelector("ul");
+    const li = document.createElement("li");
+
+    li.innerText = message;
+    ul.appendChild(li);
+};
