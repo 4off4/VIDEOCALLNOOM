@@ -108,11 +108,14 @@ camerasSelect.addEventListener("input", handleCameraChange);
 const welcome = document.getElementById("welcome"); 
 const welcomeForm = welcome.querySelector("form");
 
-async function initCall() {
+async function initCall(roomName) {
     welcome.hidden = true;
     call.hidden = false;
     nick.hidden = false;
     room.hidden = true;
+
+    const roomN = call.querySelector("h3");
+    roomN.innerText = roomName;
 
     await getMedia();
     makeConnection();
@@ -129,6 +132,7 @@ async function handleWelcomeSubmit(event){
     // form 이용하며 백엔드로 메시지 보내기 
     const nameForm = nick.querySelector("#name");
     const msgForm = room.querySelector("#msg");
+
     nameForm.addEventListener("submit", handleNicknameSubmit);
     msgForm.addEventListener("submit", handleMessageSubmit);
     
@@ -138,7 +142,7 @@ async function handleWelcomeSubmit(event){
     }else if(inputV.length <= 1 || inputV.length > 10){
         alert("The room name is at least 2 to 10 characters long!");
     }else{
-        await initCall();
+        await initCall(inputV);
         socket.emit("join_room", inputV);
         roomName = inputV;
         input.value = "";
@@ -243,7 +247,7 @@ function handleNicknameSubmit(event){
         alert("The room name is at least 2 to 10 characters long!");
     }else {
         socket.emit("nickname", value);
-        nickNameCheck.innerText = value + `님`;
+        nickNameCheck.innerText = value;
         input.value = "";
         nick.hidden = true;
         room.hidden = false;

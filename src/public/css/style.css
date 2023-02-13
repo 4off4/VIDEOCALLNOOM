@@ -1,14 +1,20 @@
 @import url(https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css);
-@import url(https://fonts.googleapis.com/css?family=Lato:300,400,700);
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap');
 
 * {
     padding: 10px;
     text-align: center;
-    background-color: F2F8F8;
+    background-color: #F2F8F8;
+    font-family: 'Rubik', sans-serif;
+    font-weight: 400;
+}
+
+header > h1 {
+    font-weight: 700;
 }
 
 body {
-    background-color: F2F8F8;
+    background-color: #F2F8F8;
 }
 
 #welcome > form {
@@ -22,7 +28,7 @@ h1, main {
 }
 
 input {
-    width: 140px;
+    width: 250px;
     height: 45px;
     font-size: 15px;
     border: 0;
@@ -133,4 +139,9 @@ select:disabled {
     margin: 0;
     padding: 20px 0 20px 50px;
     list-style: none;
+}
+
+/* 글꼴 색상 */
+#call > h4 {
+    color: #A8ADB4;
 }
